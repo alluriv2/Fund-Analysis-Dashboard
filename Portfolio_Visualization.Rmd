@@ -1,0 +1,63 @@
+---
+title: "Project_1"
+Author: Vaibhav Alluri
+date: "2024-11-25"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyverse)
+library(treemap)
+library(treemapify)
+library(ggfittext)
+
+```
+
+
+
+```{r}
+file_path <-"/Users/heda/Desktop/CLARKSON/Fall_2024/Info_Viz/Final_Project/Project_1/Motilal_Portfolio.csv"
+data <- read.csv(file_path)
+
+colnames(data) <- make.names(colnames(data))
+
+data$Portfolio.Weight <- as.numeric(data$Portfolio.Weight)
+data$Return_3M <- as.numeric(data$Return_3M)
+
+data$Security.Label <- paste0(
+  data$Security
+)
+
+treemap(
+  data,
+  index = c("Holding.Type", "Sector", "Security.Label"),  
+  vSize = "Portfolio.Weight",
+  vColor = "Holding.Type",
+  type = "categorical",
+  palette = "Set3",                            
+  title = "Motilal Oswal Portfolio",
+  fontsize.labels = c(0, 12, 10,10),                        
+  align.labels = list(c("center", "center"),c("center","top")), 
+  fontcolor.labels = c("black", "black","black")       
+)
+```
+
+
+
+
+
+
+
+
+
