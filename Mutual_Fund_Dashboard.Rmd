@@ -1,0 +1,298 @@
+---
+title: "Mutual_Fund_Dashboard"
+Author: "Vaibhav Alluri"
+output: html_document
+date: "2024-12-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(plotly)
+
+# Load data
+historical_prices <- read.csv("Historical_Closing_Prices.csv")
+portfolio <- read.csv("Motilal_Portfolio.csv")
+
+# Ensure the Date column is in Date format
+historical_prices$Date <- as.Date(historical_prices$Date)
+
+# Fix column names if necessary
+colnames(portfolio) <- gsub("\\.", " ", colnames(portfolio)) # Replace dots with spaces
+
+# Custom CSS for Responsive Design and Graphs
+custom_css <- "
+  .main-header .sidebar-toggle {
+    display: none; /* Hide default toggle button */
+  }
+  .custom-toggle {
+    float: left;
+    margin-left: 5px;
+    margin-top: 0px;
+    color: white;
+    cursor: pointer;
+  }
+  .box {
+    overflow: hidden; /* Ensure graphs don't overflow */
+  }
+"
+
+# Define UI
+ui <- dashboardPage(
+  dashboardHeader(
+    title = tags$div(
+      tags$span(class = "custom-toggle", icon("bars"), id = "custom-toggle"), # Custom Sidebar Toggle Button
+      "Motilal Oswal Flexi Cap Fund Dashboard" # Header with fund name
+    ),
+    titleWidth = 400
+  ),
+  dashboardSidebar(
+    sidebarMenu(
+      id = "sidebarMenu",
+      menuItem("Portfolio Overview", tabName = "portfolio", icon = icon("pie-chart")),
+      menuItem("Returns Calculator", tabName = "returns", icon = icon("calculator")),
+      menuItem("Fund Performance", tabName = "performance", icon = icon("chart-line"))
+    )
+  ),
+  dashboardBody(
+    tags$head(tags$style(HTML(custom_css))),
+    tags$script(HTML("
+      $(document).on('click', '#custom-toggle', function() {
+        var body = $('body');
+        if (body.hasClass('sidebar-collapse')) {
+          body.removeClass('sidebar-collapse');
+        } else {
+          body.addClass('sidebar-collapse');
+        }
+      });
+    ")),
+    tabItems(
+      # Portfolio Overview
+      tabItem(tabName = "portfolio",
+              fluidRow(
+                box(title = "Fund Information", status = "primary", solidHeader = TRUE, width = 12,
+                    p("Fund Name: Motilal Oswal Flexi Cap Fund"),
+                    p("Date of Inception: 28 Dec 2009"),
+                    p("Total AUM: ₹61382.27 crores")
+                ),
+                box(title = "Holding Types Distribution", status = "primary", solidHeader = TRUE, width = 6,
+                    plotOutput("holdingDonut")),
+                box(title = "Sector Allocation", status = "primary", solidHeader = TRUE, width = 6,
+                    plotOutput("sectorBar"))
+              )),  
+      
+      # Returns Calculator
+      tabItem(tabName = "returns",
+              fluidRow(
+                box(title = "Investment Type", status = "primary", solidHeader = TRUE, width = 12,
+                    radioButtons("investmentType", "Select Investment Type:", 
+                                 choices = c("Lumpsum" = "lumpsum", "SIP" = "sip"),
+                                 selected = "lumpsum"),
+                    sliderInput("investmentAmountSlider", "Investment Amount (₹):", 
+                                min = 1000, max = 1000000, value = 50000, step = 1000),
+                    numericInput("investmentAmountInput", "Investment Amount (₹):", 
+                                 value = 50000, min = 1000, step = 1000)
+                ),
+                conditionalPanel(
+                  condition = "input.investmentType == 'sip'",
+                  box(title = "SIP Details", status = "primary", solidHeader = TRUE, width = 12,
+                      numericInput("sipMonths", "Number of Months:", value = 12, min = 1, step = 1)
+                  )
+                ),
+                box(title = "Result", status = "info", solidHeader = TRUE, width = 12,
+                    verbatimTextOutput("returnResult"))
+              )),
+      
+      # Fund Performance
+      tabItem(tabName = "performance",
+              fluidRow(
+                box(title = "Select Timeframe", status = "primary", solidHeader = TRUE, width = 12,
+                    radioButtons("timeframe", "Select Timeframe:",
+                                 choices = c("1 Month" = "1m", "3 Months" = "3m", "1 Year" = "1y", 
+                                             "3 Years" = "3y", "5 Years" = "5y", "All Time" = "all"),
+                                 selected = "1m", inline = TRUE)
+                )
+              ),
+              tabsetPanel(
+                tabPanel("NAV Performance", plotlyOutput("navPerformanceGraph")),
+                tabPanel("NAV Comparison", plotlyOutput("navComparisonGraph")),
+                tabPanel("Risk vs Return", plotOutput("riskReturnGraph"))
+              )
+      )
+    )
+  )
+)
+
+# Define Server
+server <- function(input, output, session) {
+  
+  # Sync slider and numeric input for investment amount
+  observe({
+    updateNumericInput(session, "investmentAmountInput", value = input$investmentAmountSlider)
+  })
+  observe({
+    updateSliderInput(session, "investmentAmountSlider", value = input$investmentAmountInput)
+  })
+  
+  # Reset timeframe to 1 month when returning to the Fund Performance page
+  observeEvent(input$sidebarMenu, {
+    if (input$sidebarMenu == "performance") {
+      updateRadioButtons(session, "timeframe", selected = "1m")
+    }
+  })
+  
+  # Returns Calculator
+  output$returnResult <- renderText({
+    req(input$investmentAmountInput, input$investmentType)
+    
+    if (input$investmentType == "lumpsum") {
+      invested <- input$investmentAmountInput
+      interest <- invested * 0.08
+      total_value <- invested + interest
+      paste("Lumpsum Investment:\nInvested Amount: ₹", invested,
+            "\nInterest Earned: ₹", round(interest, 2),
+            "\nTotal Value: ₹", round(total_value, 2))
+    } else if (input$investmentType == "sip") {
+      months <- input$sipMonths
+      invested <- input$investmentAmountInput * months
+      interest <- invested * 0.08 / 12 * months
+      total_value <- invested + interest
+      paste("SIP Investment:\nInvested Amount: ₹", invested,
+            "\nInterest Earned: ₹", round(interest, 2),
+            "\nTotal Value: ₹", round(total_value, 2))
+    }
+  })
+  
+  # Holding Types Pie Chart
+  output$holdingDonut <- renderPlot({
+    pie_data <- portfolio %>%
+      group_by(`Holding_Type`) %>%
+      summarize(Weight = sum(`Portfolio_Weight`, na.rm = TRUE), .groups = "drop")
+    
+    ggplot(pie_data, aes(x = "", y = Weight, fill = `Holding_Type`)) +
+      geom_bar(stat = "identity", width = 1) +
+      coord_polar("y", start = 0) +
+      theme_void() +
+      labs(title = "Holding Types Distribution", fill = "Holding Type") +
+      theme(plot.title = element_text(hjust = 0.5))
+  })
+  
+  # Sector Allocation Bar Chart
+  output$sectorBar <- renderPlot({
+    sector_data <- portfolio %>%
+      group_by(Sector) %>%
+      summarize(Weight = sum(`Portfolio_Weight`, na.rm = TRUE), .groups = "drop")
+    
+    ggplot(sector_data, aes(x = reorder(Sector, Weight), y = Weight, fill = Sector)) +
+      geom_bar(stat = "identity") +
+      coord_flip() +
+      labs(title = "Sector Allocation", x = "Sector", y = "Portfolio Weight (%)") +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+  })
+  
+  # NAV Performance Graph
+  output$navPerformanceGraph <- renderPlotly({
+    timeframe <- switch(input$timeframe,
+                        "1m" = filter(historical_prices, Date >= as.Date("2024-11-01") & Date <= as.Date("2024-11-30")),
+                        "3m" = filter(historical_prices, Date >= as.Date("2024-09-01") & Date <= as.Date("2024-11-30")),
+                        "6m" = filter(historical_prices, Date >= as.Date("2024-06-01") & Date <= as.Date("2024-11-30")),
+                        "1y" = filter(historical_prices, format(Date, "%Y") == "2024"),
+                        "3y" = filter(historical_prices, format(Date, "%Y") %in% c("2024", "2023", "2022")),
+                        "5y" = filter(historical_prices, format(Date, "%Y") %in% c("2024", "2023", "2022", "2021", "2020")),
+                        "all" = historical_prices)
+    
+    nav_data <- timeframe %>%
+      select(Date, Motilal_Oswal_Flexi_Cap_Fund_Direct_Growth_NAV)
+    
+    plot_ly(nav_data, x = ~Date, y = ~Motilal_Oswal_Flexi_Cap_Fund_Direct_Growth_NAV, 
+            type = "scatter", mode = "lines", 
+            line = list(color = "blue")) %>%
+      layout(
+        title = "NAV Performance Over Time",
+        xaxis = list(title = "Date", showticklabels = FALSE),
+        yaxis = list(title = "NAV Value (₹)"),
+        showlegend = FALSE
+      )
+  })
+  
+  # NAV Comparison Graph
+  output$navComparisonGraph <- renderPlotly({
+    timeframe <- switch(input$timeframe,
+                        "1m" = filter(historical_prices, Date >= as.Date("2024-11-01") & Date <= as.Date("2024-11-30")),
+                        "3m" = filter(historical_prices, Date >= as.Date("2024-09-01") & Date <= as.Date("2024-11-30")),
+                        "6m" = filter(historical_prices, Date >= as.Date("2024-06-01") & Date <= as.Date("2024-11-30")),
+                        "1y" = filter(historical_prices, format(Date, "%Y") == "2024"),
+                        "3y" = filter(historical_prices, format(Date, "%Y") %in% c("2024", "2023", "2022")),
+                        "5y" = filter(historical_prices, format(Date, "%Y") %in% c("2024", "2023", "2022", "2021", "2020")),
+                        "all" = historical_prices)
+    
+    comparison_data <- timeframe %>%
+      select(Date, Motilal_Oswal_Flexi_Cap_Fund_Direct_Growth_NAV, Union_Flexi_Cap_Fund_Direct_Growth_NAV) %>%
+      pivot_longer(cols = c(Motilal_Oswal_Flexi_Cap_Fund_Direct_Growth_NAV, Union_Flexi_Cap_Fund_Direct_Growth_NAV), 
+                   names_to = "Metric", values_to = "Value")
+    
+    plot_ly(comparison_data, x = ~Date, y = ~Value, color = ~Metric, type = "scatter", mode = "lines",
+            line = list(width = 2)) %>%
+      layout(
+        title = "NAV Comparison: Motilal Oswal vs Union Flexi Cap Funds",
+        xaxis = list(title = "Date", showticklabels = FALSE),
+        yaxis = list(title = "NAV Value (₹)"),
+        legend = list(title = list(text = "Fund"))
+      )
+  })
+  
+ 
+   # Risk vs Return Graph for All Time
+  output$riskReturnGraph <- renderPlot({
+    # Filter the data for all time
+    historical_prices <- read.csv("Historical_Closing_Prices.csv")
+    historical_prices$Date <- as.Date(historical_prices$Date)
+
+    # Calculate returns for each security column
+    returns_data <- historical_prices %>%
+      select(-Date) %>%
+      apply(2, function(x) (diff(x) / lag(x)) * 100) # Calculate percentage returns for each security
+
+    # Calculate standard deviation (risk) for each security
+    risk_data <- apply(returns_data, 2, sd, na.rm = TRUE)
+
+    # Calculate the average return for each security (used for plotting)
+    return_data <- apply(returns_data, 2, mean, na.rm = TRUE)
+
+    # Create a data frame for plotting
+    risk_return_data <- data.frame(Security = colnames(returns_data), 
+                                   Risk = risk_data, 
+                                   Return = return_data)
+    
+  #  portfolio$Portfolio_Weight <- as.numeric(data$Portfolio_Weight)
+
+
+    # Plot Risk vs Return
+    ggplot(risk_return_data, aes(x = Risk, y = Return, label = Security,color = Security,size= portfolio$Portfolio_Weight  )) +
+      geom_point() +  # Scatter plot
+      # geom_text(nudge_y = 1, nudge_x = 0.5) +  # Label points with security names
+      labs(title = "Risk vs Return (All Time)", 
+           x = "Risk (Standard Deviation)", 
+           y = "Return (%)") +
+      theme_minimal()
+  })
+  
+
+
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+
+```
