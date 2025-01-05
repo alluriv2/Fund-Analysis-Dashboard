@@ -27,12 +27,12 @@ library(ggfittext)
 
 
 ```{r}
-file_path <-"/Users/heda/Desktop/CLARKSON/Fall_2024/Info_Viz/Final_Project/Project_1/Motilal_Portfolio.csv"
+file_path <-"Motilal_Portfolio.csv"
 data <- read.csv(file_path)
 
 colnames(data) <- make.names(colnames(data))
 
-data$Portfolio.Weight <- as.numeric(data$Portfolio.Weight)
+data$Portfolio_Weight <- as.numeric(data$Portfolio_Weight)
 data$Return_3M <- as.numeric(data$Return_3M)
 
 data$Security.Label <- paste0(
@@ -41,9 +41,9 @@ data$Security.Label <- paste0(
 
 treemap(
   data,
-  index = c("Holding.Type", "Sector", "Security.Label"),  
-  vSize = "Portfolio.Weight",
-  vColor = "Holding.Type",
+  index = c("Holding_Type", "Sector", "Security.Label"),  
+  vSize = "Portfolio_Weight",
+  vColor = "Holding_Type",
   type = "categorical",
   palette = "Set3",                            
   title = "Motilal Oswal Portfolio",
