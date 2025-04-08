@@ -1,4 +1,4 @@
-Mutual Fund Dashboard and Portfolio Visualization
+# Mutual Fund Dashboard and Portfolio Visualization
 
 This repository contains two R-based projects for visualizing and analyzing mutual fund data:
 	1.	Mutual Fund Dashboard: An interactive Shiny application for portfolio analysis, return calculations, and fund performance visualization.
@@ -92,5 +92,4 @@ Contributors
 
 Acknowledgments
 
-Special thanks to Motilal Oswal and financial datasets for providing the foundation for analysis and visualization.# Fund-Analysis-Dashboard
-# Fund-Analysis-Dashboard
+Special thanks to Motilal Oswal and financial datasets for providing the foundation for analysis and visualization.
