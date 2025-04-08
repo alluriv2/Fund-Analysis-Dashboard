@@ -49,7 +49,7 @@ This repository contains two R-based projects for visualizing and analyzing mutu
 ### 1. Clone the Repository
 Clone the repository to your local machine:
 ```bash
-git clone https://github.com/<your-username>/<Fund-Analysis-Dashboard>.git
+git clone https://github.com/<alluriv2>/<Fund-Analysis-Dashboard>.git
 cd <Fund-Analysis-Dashboard>
 ```
 
