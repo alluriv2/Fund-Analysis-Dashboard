@@ -12,7 +12,7 @@ This repository contains two R-based projects for visualizing and analyzing mutu
    - An interactive dashboard built with Shiny and ShinyDashboard.
    - Visualizes mutual fund data, calculates returns, and tracks NAV performance.
    
-2. **Portfolio_Visualisation.Rmd**
+2. **Portfolio_Visualization.Rmd**
    - Generates treemaps to represent portfolio composition, sector allocation, and holding types.
 
 ## Features
@@ -75,10 +75,10 @@ shiny::runApp("Mutual_Fund_Dashboard.Rmd")
 #### Portfolio Visualization Treemap
 1. Make sure to update the file path for `Motilal_Portfolio.csv` in the code if necessary.
 
-2. Knit the `Portfolio_Visualisation.Rmd` file in RStudio or run the relevant code chunks to generate the treemap.
+2. Knit the `Portfolio_Visualization.Rmd` file in RStudio or run the relevant code chunks to generate the treemap.
 
    - To knit the file:
-     - Open the file `Portfolio_Visualisation.Rmd` in RStudio.
+     - Open the file `Portfolio_Visualization.Rmd` in RStudio.
      - Click the "Knit" button in RStudio to generate the treemap.
 
 ### 4. Datasets
